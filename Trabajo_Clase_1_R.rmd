@@ -1,0 +1,77 @@
+
+title: "Asignacion 1 R"
+author: "Martin Sebastian Perez P"
+date: "4/3/2022"
+
+
+install.packages("ggplot2")
+install.packages("Hmisc")
+install.packages("dplyr")
+
+
+library(dplyr) # Librería dplyr -> MUY IMPORTANTE
+library(readxl)
+library(ggplot2)
+library(Hmisc) # Utilización función CUT2
+
+XPABLO <- read_excel("XPABLO (2).xlsx")
+XPABLO <- XPABLO[-c(16,17,18,19)]#eliminar columnas
+View(XPABLO)
+#GeoLocalizacion CA
+
+grupos_ca<- cut(x = XPABLO$Ca, breaks = 4) # cut -> Función para crear categorías
+unique(grupos)#funcion que devuelve un vector con las categorias creadas en "grupos
+
+ggplot(XPABLO, aes(x = Long, y = Lat, color = grupos_ca)) + #Aesthetic
+  geom_point()
+
+#GeoLocalizacion MG
+grupos_mg <- cut(x = XPABLO$Mg, breaks = 4) 
+unique(grupos_Mg)
+
+ggplot(XPABLO, aes(x = Long, y = Lat, color = grupos_mg)) + 
+  geom_point()
+
+#GeoLocalizacion K
+
+grupos_k <- cut(x = XPABLO$K, breaks = 5) 
+unique(grupos_K)
+
+ggplot(XPABLO, aes(x = Long, y = Lat, color = grupos_k)) +
+  geom_point()
+
+#GeoLocalizacion Na
+
+grupos_na <- cut(x = XPABLO$Na, breaks = 4) 
+unique(grupos2)
+
+ggplot(XPABLO, aes(x = Long, y = Lat, color = grupos_na)) + 
+  geom_point()
+
+#GeoLocalizacion Mo/Fe
+##(Escasez de hierro en suelos organicos)##
+
+
+MO_Fe = XPABLO$MO/XPABLO$Fe
+nuevos_grupos <- quantile(x = MO_Fe, probs = c(0.25, 0.5, 0.75))
+nuevos_grupos
+
+q_1 = nuevos_grupos[1];q_1
+q_2 = nuevos_grupos[2];q_2
+q_3 = nuevos_grupos[3];q_3
+
+data1 <- subset(MO_Fe, MO_Fe < q_1);data1
+data2 <- subset(MO_Fe, MO_Fe < q_2 & MO_Fe > q_1)#;data2
+data3 <- subset(MO_Fe, MO_Fe < q_3 & MO_Fe > q_2)#;data3
+data4 <- subset(MO_Fe, MO_Fe > q_3)#;data4
+```
+
+colors <- ifelse(MO_Fe %in% data1, 'orange',
+                 ifelse(MO_Fe %in% data2, 'red3',
+                        ifelse(MO_Fe %in% data3, 'yellow','green')))
+ggplot(XPABLO, aes(Long, Lat, fill = colors ))+
+  geom_point(color = colors)+
+  scale_fill_discrete(name = 'Relacion Mo/Fe', labels = c('25%', '25%-50%', '50%-75%', ' 75%-100%'))
+
+
+
