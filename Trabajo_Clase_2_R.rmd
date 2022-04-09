@@ -1,0 +1,83 @@
+title: "Asignacion 1 R"
+author: "Martin Sebastian Perez P"
+date: "31/03/2022"
+
+install.packages("ape")
+
+library(ape)
+library(readxl)
+library(dplyr) # Librería dplyr -> MUY IMPORTANTE
+library(readxl)
+library(ggplot2)
+library(Hmisc) # Utilización función CUT2
+
+
+#Lectura Hoja de Excel
+
+XPABLO <- read_excel("XPABLO (2).xlsx")
+View(XPABLO)
+XPABLO <- XPABLO[-c(16,17,18,19)]#Eliminar columnas
+colnames(XPABLO)
+
+#Lectura Hoja de Excel
+
+dist_matrix_p <- as.matrix(dist(cbind(XPABLO$Long,XPABLO$Lat)))#cbidn pegar columnas de un argumento
+which.max(dist_matrix_p) # Es la posición de la máxima
+max(dist_matrix_p) # Mayor valor 
+min(dist_matrix_p) # Menor valor
+dim(XPABLO)#dimensiones de la matriz
+
+#Matriz inversa de distancias
+
+dist_matrix_inv <- 1 / dist_matrix_p # Element wise
+diag(dist_matrix_inv) <- 0# Matriz inversa
+dist_matrix_inv
+
+#Calcular Indice de Moran para Materia organica
+
+Moran.I(XPABLO$MO, dist_matrix_inv)# p.value < 0.05 <- Dependencia espacial
+
+#Calcular Indice de Moran para Calcio
+
+Moran.I(XPABLO$Ca, dist_matrix_inv)
+
+#Calcular Indice de Moran para Magnesio
+
+Moran.I(XPABLO$Mg, dist_matrix_inv)
+
+#Calcular Indice de Moran para Potasio
+
+Moran.I(XPABLO$K, dist_matrix_inv)
+
+#Calcular Indice de Moran para Sodio
+
+Moran.I(XPABLO$Na, dist_matrix_inv)
+
+#Calcular Indice de Moran para la variable Cice
+
+Moran.I(XPABLO$CICE, dist_matrix_inv)
+
+#Calcular Indice de Moran para la variable Ce
+
+Moran.I(XPABLO$CE, dist_matrix_inv)
+
+#Calcular Indice de Moran para la variable Hierro
+
+Moran.I(XPABLO$Fe, dist_matrix_inv)
+
+#Calcular Indice de Moran para la variable Cobre
+
+Moran.I(XPABLO$Cu, dist_matrix_inv)
+
+#Calcular Indice de Moran para la variable Zinc
+
+Moran.I(XPABLO$Zn, dist_matrix_inv)
+
+
+
+
+
+
+
+
+
