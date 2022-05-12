@@ -1,0 +1,85 @@
+---
+title: "Parcial Computacion Estadistica"
+output: html_document
+date: '2022-05-12'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Creaccion df
+```{r}
+
+install.packages("writexl")
+
+
+set.seed(1001083581)
+coords <-expand.grid(x=1:10,
+                     y=1:12)
+cbd<-c(rnorm(30,60,2),
+       rnorm(30,50,1.5),
+       runif(30,30,40),
+       rnorm(30,40,3));cbd
+accesion<- gl(4,30,120,labels=c("A1","A2","A3","A4"))
+
+df<-data.frame(x=coords$x,y=coords$y,cbd=cbd,accesion=accesion);df
+       
+```
+#Estadistica inferencial.
+
+##Normalidad
+
+```{r}
+mod = aov(cbd ~ accesion, data = df)
+s_mod = summary(mod)
+p_valor = s_mod[[1]][1,5]
+print(p_valor)
+shapiro.test(mod$residuals)
+```
+
+##Homos
+
+```{r}
+
+bartlett.test(mod$residuals, df$accesion)
+
+```
+##Dependecia espacial
+
+```{r}
+
+matriz_dist <- as.matrix(dist(cbind(x = df$x, y = df$y)))
+
+dim(matriz_dist)
+
+m_dist_inv <- 1/matriz_dist
+m_dist_inv[is.infinite(m_dist_inv)] <- 0
+diag(m_dist_inv) <- 0
+m_dist_inv
+
+res<- mod$residuals
+hist(res)
+
+Moran.I(res, m_dist_inv)
+```
+
+##Conclusiones
+
+```{r}
+$las varianzas son iguales.
+$Los datos siguen una distribucion normal$
+$No hay dependencia espacial.$
+$Se rechaza la hipotesis,por lo cual hay  diferencia entre las accesiones.
+```
+
+
+
+```{r}
+
+library(writexl)
+write_xlsx(df, 'datos_CE_1001083581.xlsx')
+
+```
+
+
