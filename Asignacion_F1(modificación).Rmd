@@ -1,0 +1,356 @@
+---
+title: "Asignacion_F1"
+output: html_document
+date: '2022-06-09'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Creaccion df
+```{r}
+set.seed(1001083581)
+edad <- abs(round(rnorm(n = 1000,
+                        mean = 67,
+                        sd = 2)))
+dap <- abs(round(rnorm(n = 1000,
+                      mean = 30,
+                      sd = 3), 1)) #diámetro a la altura del pecho
+hibrido <- factor(rbinom(n = 1000,
+                         size = 1,
+                         prob = 0.6),
+                  labels = c('h1', 'h2'))
+rto <- abs(round(rnorm(n = 1000,
+                       mean = 80,
+                       sd = 5), 1)) #Rendimiento
+
+cloA <- abs(round(rnorm(n = 1000,
+                        mean = 320,
+                        sd = 10)))
+
+z <- 0.22 * edad - 0.12 * cloA + dap -8 #Variable artificial
+
+pr <- 1/(1+exp(-z)) # Probabilidad de aborto
+
+y = rbinom(1000,1,pr) # Abortos
+
+abortos <- factor(rbinom(1000, 1, pr),
+                  labels = c('Si', 'No'))
+
+data <- data.frame(edad,
+                   dap,
+                   hibrido,
+                   rto,
+                   cloA,
+                   abortos)
+data
+       
+```
+
+
+#Analisis univariado
+```{r}
+univariable_edad <- glm(abortos ~ edad, family = binomial, data = data)
+summary(univariable_edad)
+```
+
+```{r}
+univariable_dap <- glm(abortos ~ dap, family = binomial, data = data)
+summary(univariable_dap)
+```
+
+```{r}
+univariable_hibrido <- glm(abortos ~ hibrido, family = binomial, data = data)
+summary(univariable_hibrido)
+```
+
+```{r}
+univariable_rto <- glm(abortos ~ rto, family = binomial, data = data)
+summary(univariable_rto)
+```
+
+```{r}
+univariable_cloA <- glm(abortos ~ cloA, family = binomial, data = data)
+summary(univariable_cloA)
+```
+
+```{r}
+model1 <- glm(abortos ~ edad + dap + hibrido + rto + cloA, family = binomial, data = data) # Eliminar variable Con el valor estadistico P mas alto
+#Eliminar Hibrido
+#Revisar RTO
+summary(model1)
+```
+
+```{r}
+model2 <- glm(abortos ~ edad + dap + rto + cloA, family = binomial, data = data)#Modelo con la variable Eliminada.
+summary(model2)
+
+#Extracion Coefiecientes y eliminacion variables.
+
+coefficient=c(summary(model2)$coefficients[,1])
+coefficient <- coefficient[-c(1)]#Eliminar columnas
+
+standard_error=c(summary(model2)$coefficients[,2])
+standard_error <- standard_error[-c(1)]
+
+p_value=c(summary(model2)$coefficients[,4])
+p_value <- p_value[-c(1)]
+p_value
+
+recap <- cbind(Coefficient=coefficient,Standard_error=standard_error,P_value=p_value)
+recap
+
+       
+```
+#Modelo  Multi_variado
+
+```{r}
+model3 <- glm(abortos ~ edad + dap + cloA, family = binomial, data = data) # Elimiando la variable con el p  value más alto
+summary(model3)
+```
+#Delta Beta
+##modelo 1-2
+```{r}
+delta.coef <- abs((coef(model2)-coef(model1)[-c(4)])/coef(model1)[-c(4)])
+round(delta.coef, 3)
+```
+##modelo 2-3
+
+```{r}
+
+delta.coef <- abs((coef(model3)-coef(model2)[-c(4)])/coef(model2)[-c(4)])
+round(delta.coef, 3)
+
+# El resultado muestra que todas las variables cambian a un ritmo insignificante.lasvariables anteriormente eliminadas no generan un desajuste importante para el efecto de otras variables
+
+#Se elige el modelo 3,que describe de forma mas sencilla(menor cantidad de Varibales)
+```
+
+
+```{r}
+
+model_inter=glm(abortos ~edad + dap + cloA  +edad:cloA, family = 'binomial', data = data)
+summary(model_inter)
+
+```
+```{r}
+
+delta.coef <- abs((coef(model3)-coef(model_inter)[-c(4)])/coef(model_inter)[-c(4)])
+round(delta.coef, 3)#Sobra este ensayo:se revisa directamente el indice
+# EL valor de Cloa cambia bastante
+
+```
+#Ratio test.
+```{r}
+install.packages("lmtest")
+library(lmtest)
+
+lrtest(model_inter,model3)
+
+#Los resultados son exactamente los mismos
+
+```
+
+#Modelo de efectos principales
+
+```{r}
+model_final <- glm(abortos ~ edad + dap + cloA, family = binomial, data = data) # Elimiando la variable con el p  value más alto y el modelo mas sencillo.
+summary(model_final)
+```
+#Suposición de linealidad.
+
+```{r}
+par(mfrow = c(2,3))
+scatter.smooth(edad, log(pr/(1-pr)), cex = 0.5) #Esta variable parece no tener una linealidad
+scatter.smooth(dap, log(pr/(1-pr)), cex = 0.5)
+scatter.smooth(cloA, log(pr/(1-pr)), cex = 0.5)
+```
+#Extrayendo las predicciones de abortos
+
+```{r}
+
+rta= model_final$fitted.values
+prop_ab <- rta*100
+cat_edad <- cut(data$edad,breaks = 4)
+cat_cloA <- cut(data$cloA,breaks=4)
+data_2 <- data.frame(cat_edad, cat_cloA, prop_ab)
+
+tips2 <- data_2 %>% 
+  group_by(cat_cloA, cat_edad) %>% 
+  summarise(media_prop_abortos = mean(prop_ab)) 
+```
+
+
+```{r}
+# Graficando las dos variables
+library(ggplot2)
+
+ggplot(data = tips2) +
+  aes(x = cat_edad, y = media_prop_abortos, color = cat_cloA) +
+  geom_line(aes(group = cat_cloA))## Lo datos no tienen  un comportamiento lineal,al revisar la grafica se requiere revisar la variable que no tiene el comportamiento lineal
+```
+
+#Final
+```{r}
+
+install.packages("ResourceSelection")
+
+library(ResourceSelection)
+
+cut_prob <- ifelse(fitted(model_inter) > 0.5, 1, 0)
+table(model_inter$y, cut_prob)
+
+
+
+Predprob<-predict(model_inter,type="response")
+plot(Predprob,jitter(as.numeric(abortos),0.5), cex=0.5, ylab="Abortos")
+abline(v = 0.5, col = 'red')
+text(x = 0.8, y = 1.8, 'alta probabilidad de abortos, \n predicha y observada')
+text(x = 0.2, y = 1.2, 'alta probabilidad de no abortos, \n predicha y observada')
+
+
+
+
+```
+#Data Frame modificado
+
+
+
+```{r}
+install.packages("faux")
+
+library(faux)
+
+dfa2 <- rnorm_multi(n = 1000,
+            mu = c(67, 30, 30, 320),
+            sd = c(2, 3, 5, 10),
+            varnames = c('edad', 'dapf', 'rto', 'clolA'),
+            r = c(0.4, 0.6, 0.5, 0.6, 0.7, 0.8))
+
+dfa2$hibrido <- round(runif(n = 1000, min = 0,max = 1.2),)
+
+w <- 0.5 * dfa2$clolA - 0.01 * dfa2$dapf - 0.6 * dfa2$rto - 0.02 * dfa2$edad
+
+dfa2$abortos <- ifelse(w > 140, 'Si_aborto', 'No_aborto')
+
+dfa2
+
+```
+
+
+#Analisis univariado
+
+```{r}
+univariable_edad <- glm(abortos ~ edad, family = binomial, data = dfa2)
+class(abortos)
+summary(univariable_edad)
+#(ERROR)
+summary(model1_2)
+```
+```{r}
+model2_2 <- glm(abortos ~ edad + dapf + rto + clolA, family = binomial, data = dfa2)#Modelo con la variable Eliminada.
+summary(model2_2)
+
+#Extracion Coefiecientes y eliminacion variables.
+
+coefficient=c(summary(model2_2)$coefficients[,1])
+coefficient <- coefficient[-c(1)]#Eliminar columnas
+
+standard_error=c(summary(model2_2)$coefficients[,2])
+standard_error <- standard_error[-c(1)]
+
+p_value=c(summary(model2_2)$coefficients[,4])
+p_value <- p_value[-c(1)]
+p_value
+
+recap_2 <- cbind(Coefficient=coefficient,Standard_error=standard_error,P_value=p_value)
+recap_2
+
+       
+```
+
+
+```{r}
+model3_2 <- glm(abortos ~ edad + dapf + rto, family = binomial, data = dfa2) # Elimiando la variable con el p  value más alto
+summary(model3_2)
+```
+```{r}
+delta.coef <- abs((coef(model2_2)-coef(model1_2)[-c(4)])/coef(model1_2)[-c(4)])
+round(delta.coef, 3)
+```
+
+```{r}
+
+delta.coef <- abs((coef(model3_2)-coef(model2_2)[-c(4)])/coef(model2_2)[-c(4)])
+round(delta.coef, 3)
+
+# El resultado muestra que todas las variables cambian a un ritmo mayor que conrepecto al modelo2
+
+#Se elige el modelo 2,que describe de forma mas sencilla(menor cantidad de Varibales)
+```
+
+
+```{r}
+
+model_final_2 <- glm(abortos ~ edad + dapf + rto + clolA, family = binomial, data = dfa2)#Modelo con la variable Eliminada.
+summary(model_final_2)
+```
+```{r}
+
+model_final_3 <- glm(abortos ~ edad + dapf + rto, family = binomial, data = dfa2)#Modelo con la variable Eliminada.
+summary(model_final_3)
+```
+
+```{r}
+
+model_final_4 <- glm(abortos ~ dapf + rto, family = binomial, data = dfa2)#Modelo con la variable Eliminada.
+summary(model_final_4)
+```
+```{r}
+
+model_final_5 <- glm(abortos ~rto, family = binomial, data = dfa2)#Modelo con la variable Eliminada.
+summary(model_final_5)
+```
+
+
+
+#Ratio test.
+```{r}
+install.packages("lmtest")
+library(lmtest)
+
+lrtest(model_final_5,model_final_4)
+
+#Los resultados son exactamente los mismos
+
+```
+
+
+#Suposición de linealidad.
+
+```{r}
+
+par(mfrow = c(2,3))
+scatter.smooth(edad, log(pr/(1-pr)), cex = 0.5) # Es una pendiente muy horizontal
+
+scatter.smooth(dapf, log(pr/(1-pr)), cex = 0.5)#No Corre el objeto(ERROR)
+
+scatter.smooth(rto, log(pr/(1-pr)), cex = 0.5)#Tiene una pendiente muy horizontal
+
+```
+
+
+
+
+```{r}
+
+model_final_6 <- glm(abortos ~ dap, family = binomial, data = dfa2)# revisar un modelo con la variable lineal pero con mala probabilidad. 
+summary(model_final_6)
+```
+
+```{r}
+
+model_final_f <- glm(abortos ~ dap, family = binomial, data = dfa2)# Utilizar el modelo y revisar en las conclusiones finales su capacidad de predecir aborto
+summary(model_final_f)
+```
